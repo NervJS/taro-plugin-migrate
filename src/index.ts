@@ -59,6 +59,28 @@ export default (ctx) => {
         const entryResult = parseEntry(ctx, entryPath)
         const entryConfig = entryResult.configObj
         const appPages = entryConfig.pages.map(item => resolveScriptPath(path.join(sourcePath, item)))
+        const subpackages = entryConfig.subPackages || entryConfig['subpackages']
+        if (subpackages && subpackages.length) {
+          subpackages.forEach(item => {
+            if (item.pages && item.pages.length) {
+              const root = item.root
+              item.pages.forEach(page => {
+                let pageItem = `${root}/${page}`
+                pageItem = pageItem.replace(/\/{2,}/g, '/')
+                let hasPageIn = false
+                entryConfig.pages.forEach(name => {
+                  if (name === pageItem) {
+                    hasPageIn = true
+                  }
+                })
+                if (!hasPageIn) {
+                  const pagePath = resolveScriptPath(path.join(sourcePath, pageItem))
+                  appPages.push(pagePath)
+                }
+              })
+            }
+          })
+        }
         appPages.forEach(pagePath => {
           if (fs.existsSync(pagePath)) {
             parsePage(ctx, pagePath)
@@ -167,6 +189,9 @@ function parseAst (ast) {
       }
     }
   })
+  if (!configObj) {
+    configObj = {}
+  }
   return {
     configObj,
     ast,
